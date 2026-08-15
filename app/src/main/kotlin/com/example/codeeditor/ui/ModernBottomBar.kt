@@ -187,37 +187,32 @@ fun ModernBottomBar(
                                     // Compile code on server
                                     val result = compiler.compile(code, currentLanguage)
 
-                                    // Combine stdout and stderr for full visibility
-                                    var output = buildString {
+                                    // Combine stdout, stderr, compile_output for full visibility
+                                    val output = buildString {
                                         if (result.error != null) {
                                             append(result.error)
                                         } else {
-                                            if (!result.output.isNullOrEmpty()) {
-                                                append(result.output)
+                                            if (!result.stdout.isNullOrEmpty()) {
+                                                append(result.stdout)
                                             }
-                                            if (result.memory != null || result.cpuTime != null) {
-                                                append("\n--- Metrics ---\n")
-                                                if (result.memory != null) append("Memory: ${result.memory} KB\n")
-                                                if (result.cpuTime != null) append("CPU Time: ${result.cpuTime}s\n")
+                                            if (!result.stderr.isNullOrEmpty()) {
+                                                if (isNotEmpty()) append("\n--- Standard Error ---\n")
+                                                append(result.stderr)
                                             }
-                                            if (result.output.isNullOrEmpty() && result.error == null) {
+                                            if (!result.compile_output.isNullOrEmpty()) {
+                                                if (isNotEmpty()) append("\n--- Compiler Log ---\n")
+                                                append(result.compile_output)
+                                            }
+                                            if (result.stdout.isNullOrEmpty() && result.stderr.isNullOrEmpty() && result.compile_output.isNullOrEmpty()) {
                                                 append("Execution finished (no output).")
                                             }
+                                            if (result.time != null || result.memory != null) {
+                                                append("\n\n-------------------------------")
+                                                append("\nProcess finished with exit code ${result.status?.id ?: 0}")
+                                                if (result.memory != null) append("\nMemory: ${result.memory / 1024} KB")
+                                                if (result.time != null) append("\nCPU Time: ${result.time}s")
+                                            }
                                         }
-                                    }
-
-                                    // DEMO MODE FALLBACK: If unauthorized, show a mock success for presentation
-                                    if (output.contains("Unauthorized", ignoreCase = true) || output.contains("YOUR_CLIENT_ID")) {
-                                        output = """
-                                            [DEMO MODE ACTIVE]
-                                            Successfully executed ${currentLanguage.replaceFirstChar { it.uppercase() }}!
-                                            
-                                            Hello from Advanced Dark Code IDE!
-                                            -------------------------------
-                                            Process finished with exit code 0
-                                            Memory: 124 KB
-                                            CPU Time: 0.02s
-                                        """.trimIndent()
                                     }
 
                                     // Send output to screen

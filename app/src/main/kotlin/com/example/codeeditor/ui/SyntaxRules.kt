@@ -12,6 +12,10 @@ data class SyntaxRules(
 )
 
 fun loadSyntaxRules(context: Context, filename: String): SyntaxRules {
-    val jsonString = context.assets.open(filename).bufferedReader().use { it.readText() }
-    return Json.decodeFromString<SyntaxRules>(jsonString)
+    return try {
+        val jsonString = context.assets.open(filename).bufferedReader().use { it.readText() }
+        Json.decodeFromString<SyntaxRules>(jsonString)
+    } catch (e: Exception) {
+        SyntaxRules(keywords = emptyList(), comments = emptyList(), strings = emptyList())
+    }
 }

@@ -7,53 +7,46 @@ import kotlinx.coroutines.withContext
 import java.net.HttpURLConnection
 import java.net.URL
 
+data class StatusInfo(
+    val id: Int? = null,
+    val description: String? = null
+)
+
 data class CompileResponse(
-    val output: String? = null,
-    val statusCode: Int? = null,
-    val memory: String? = null,
-    val cpuTime: String? = null,
+    val stdout: String? = null,
+    val stderr: String? = null,
+    val compile_output: String? = null,
+    val time: String? = null,
+    val memory: Long? = null,
+    val status: StatusInfo? = null,
     val error: String? = null
 )
 
 class CompilerClient() {
 
-    // IMPORTANT: Replace these with your actual JDoodle credentials
-    private val clientId = "YOUR_CLIENT_ID"
-    private val clientSecret = "YOUR_CLIENT_SECRET"
-    private val endpoint = "https://api.jdoodle.com/v1/execute"
+    private val endpoint = "https://ce.judge0.com/submissions?wait=true"
 
     private fun postOnce(code: String, language: String): CompileResponse {
         val conn = (URL(endpoint).openConnection() as HttpURLConnection)
         return try {
             conn.requestMethod = "POST"
             conn.doOutput = true
-            conn.connectTimeout = 10000
-            conn.readTimeout = 20000
+            conn.connectTimeout = 15000
+            conn.readTimeout = 25000
             conn.setRequestProperty("Content-Type", "application/json; charset=utf-8")
             conn.setRequestProperty("Accept", "application/json")
 
-            // Map internal language names to JDoodle language codes
-            val jdoodleLanguage = when (language.lowercase()) {
-                "java" -> "java"
-                "python" -> "python3"
-                else -> "kotlin"
+            val languageId = when {
+                language.equals("java", ignoreCase = true) || code.contains("public class ") || code.contains("System.out.print") -> 62 // Java
+                language.equals("python", ignoreCase = true) || (code.contains("def ") && !code.contains("fun ")) || (code.contains("print(") && !code.contains(";") && !code.contains("{")) -> 71 // Python
+                else -> 78 // Kotlin
             }
 
-            // Map version indices (e.g., JDK 17 for Java/Kotlin)
-            val versionIndex = when (jdoodleLanguage) {
-                "python3" -> "4" // Python 3.10
-                else -> "4"      // JDK 17
-            }
-
-            val jsonBody = """
-                {
-                    "clientId": "$clientId",
-                    "clientSecret": "$clientSecret",
-                    "script": ${Gson().toJson(code)},
-                    "language": "$jdoodleLanguage",
-                    "versionIndex": "$versionIndex"
-                }
-            """.trimIndent()
+            val requestMap = mapOf(
+                "language_id" to languageId,
+                "source_code" to code
+            )
+            val jsonBody = Gson().toJson(requestMap)
 
             conn.outputStream.use { it.write(jsonBody.toByteArray(Charsets.UTF_8)) }
 
@@ -82,7 +75,7 @@ class CompilerClient() {
             postOnce(code, language)
         } catch (e: java.net.ConnectException) {
             CompileResponse(
-                error = "Failed to connect to JDoodle API.\nCheck your internet connection.\nError: ${e.message}"
+                error = "Failed to connect to compiler server.\nCheck your internet connection."
             )
         } catch (e: Exception) {
             CompileResponse(
@@ -95,3 +88,4 @@ class CompilerClient() {
         fileManager.saveFile(fileName, code)
     }
 }
+
