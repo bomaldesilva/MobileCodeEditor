@@ -10,6 +10,31 @@
 
 ---
 
+## 👥 Team Work Distribution & Roles
+
+### 👑 1. Bomal (Lead Developer & System Architect)
+- **Branch**: `bomal_d1`
+- **Core Responsibilities**:
+  - Entire Application Architecture Design & Modular Folder Structure
+  - **Database Layer**: `VersionDatabase.kt`, `AppDao.kt`, `Entities.kt` (File, Version, Recovery, Recent tables)
+  - **Incremental Version Control Engine**: `EditorRepository.kt`, `DiffManager.kt` (`java-diff-utils` unified diff patch chain)
+  - **Version Control UI**: `VersionHistoryDialog.kt`, `DiffViewerDialog.kt` (Arbitrary V_A vs V_B diff view & rollback mechanics)
+  - **MVVM Integration**: `EditorViewModel.kt` single-source-of-truth state management
+
+### 🎨 2. Sanduni (UI & Theme Engineer)
+- **Branch**: `sanduni_d2`
+- **Core Responsibilities**:
+  - **Editor & UI Components**: `CodeEditor.kt`, `ModernBottomBar.kt`, `DrawerContent.kt`, `ToolBar.kt`
+  - **Resource Configuration**: `themes.xml`, `colors.xml`, `strings.xml`, `network_security_config.xml`
+
+### ⚡ 3. Miheesha (Syntax & Language Specialist)
+- **Branch**: `miheesha_d3`
+- **Core Responsibilities**:
+  - **Syntax Rule Configurations**: `kotlin.json`, `java.json`, `python.json`, `markdown.json`
+  - **Syntax Parsing & Rendering**: `highlightSyntax.kt`, `SyntaxRules.kt`, Markdown preview engine
+
+---
+
 ## 🌟 Key Features
 
 ### 1. 📝 Mobile Text Editor Engine
@@ -118,18 +143,9 @@ CodeEditor/
 │   │   ├── storage/            # Room Entities, DAOs, VersionDatabase, DiffManager
 │   │   ├── ui/                 # CodeEditor, ModernBottomBar, DrawerContent, DiffViewerDialog
 │   │   └── viewmodel/          # EditorViewModel (UI State Management)
-│   └── res/                    # App icons (mipmap-*) & theme resources
+│   └── res/                    # App icons, xml configs & theme resources
 └── build.gradle.kts
 ```
-
----
-
-## 👥 Team Distribution & Branch Structure
-
-- **Main Branch**: `main`
-- **Bomal (`bomal_d1`)**: Mobile Text Editor Engine, Incremental Versioning Architecture, Room DB Schemas, UI System
-- **Sanduni (`sanduni_d2`)**: Syntax Highlighting Engine, JSON Rule Parser, Code Formatting
-- **Mihisha (`miheesha_d3`)**: Crash Recovery Auto-Save Manager, Compiler API Integration, Markdown Preview
 
 ---
 
