@@ -17,10 +17,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 /**
- * FIX: Syntax highlighting now works by feeding the AnnotatedString directly
- * into TextFieldValue.annotatedString — so there is a single text layer
- * with colors built in. The old approach used a separate Text() overlay behind
- * BasicTextField which was completely covered by BasicTextField's own white text.
+ * CodeEditor Composable
+ *
+ * Supports lag-free syntax highlighting, full touch selection/long-press word selection,
+ * cursor navigation, line numbers, word wrap toggle, and read-only mode.
  */
 @Composable
 fun CodeEditor(
@@ -33,9 +33,9 @@ fun CodeEditor(
     val scrollState = rememberScrollState()
     val rawValue = editorState.textField.value
 
-    // Build a new TextFieldValue carrying the highlighted AnnotatedString
-    // but preserving the cursor selection from the original value
-    val highlightedValue = remember(rawValue.text, syntaxRules) {
+    // FIX: Key remember on both rawValue.text and rawValue.selection
+    // so selection handles update dynamically on long-press or touch drag
+    val highlightedValue = remember(rawValue.text, rawValue.selection, syntaxRules) {
         TextFieldValue(
             annotatedString = highlightSyntax(rawValue.text, syntaxRules),
             selection = rawValue.selection,
@@ -76,13 +76,20 @@ fun CodeEditor(
             }
         }
 
-        // Editor with syntax-highlighted text
+        // BasicTextField supporting touch selection and typing
         BasicTextField(
-            // FIX: pass the highlighted annotated value directly
             value = highlightedValue,
             onValueChange = { newVal ->
-                if (!isReadOnly) {
-                    // Propagate only the raw text + selection back to state
+                if (isReadOnly) {
+                    // In read-only mode, allow cursor & selection movement, but keep text unchanged
+                    editorState.onTextChange(
+                        rawValue.copy(
+                            selection = newVal.selection,
+                            composition = newVal.composition
+                        )
+                    )
+                } else {
+                    // In edit mode, propagate full text + selection updates
                     editorState.onTextChange(
                         TextFieldValue(
                             text = newVal.text,

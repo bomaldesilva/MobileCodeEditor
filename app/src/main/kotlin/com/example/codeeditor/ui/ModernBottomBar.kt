@@ -1,6 +1,6 @@
 package com.example.codeeditor
 
-
+import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -16,6 +16,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
@@ -40,7 +41,7 @@ fun ModernBottomBar(
     showPreview: Boolean,
     onTogglePreview: (Boolean) -> Unit
 ) {
-    // Compute word and character count
+    val context = LocalContext.current
     val textValue = editorState.textField.value.text
     val wordCount = textValue.split("\\s+".toRegex()).filter { it.isNotEmpty() }.size
     val charCount = textValue.length
@@ -103,15 +104,21 @@ fun ModernBottomBar(
                         if (currentValue.hasSelection()) {
                             val selectedText = currentValue.getSelectedText()
                             clipboardManager.setText(AnnotatedString(selectedText))
-                            // Remove selected text
-                            val newText = currentValue.text.removeRange(
-                                currentValue.selection.start,
-                                currentValue.selection.end
+                            val start = minOf(currentValue.selection.start, currentValue.selection.end)
+                            val end = maxOf(currentValue.selection.start, currentValue.selection.end)
+                            val newText = currentValue.text.removeRange(start, end)
+                            editorState.onTextChange(
+                                currentValue.copy(
+                                    text = newText,
+                                    selection = TextRange(start)
+                                )
                             )
-                            editorState.textField.value = currentValue.copy(
-                                text = newText,
-                                selection = TextRange(currentValue.selection.start)
-                            )
+                            Toast.makeText(context, "Cut to Clipboard", Toast.LENGTH_SHORT).show()
+                        } else if (currentValue.text.isNotEmpty()) {
+                            // Fallback: Cut entire document if nothing selected
+                            clipboardManager.setText(AnnotatedString(currentValue.text))
+                            editorState.onTextChange(TextFieldValue(""))
+                            Toast.makeText(context, "Cut Entire Text", Toast.LENGTH_SHORT).show()
                         }
                     }
                 )
@@ -125,6 +132,11 @@ fun ModernBottomBar(
                         if (currentValue.hasSelection()) {
                             val selectedText = currentValue.getSelectedText()
                             clipboardManager.setText(AnnotatedString(selectedText))
+                            Toast.makeText(context, "Selection Copied", Toast.LENGTH_SHORT).show()
+                        } else if (currentValue.text.isNotEmpty()) {
+                            // Fallback: Copy entire document if nothing selected
+                            clipboardManager.setText(AnnotatedString(currentValue.text))
+                            Toast.makeText(context, "Copied Entire Text", Toast.LENGTH_SHORT).show()
                         }
                     }
                 )
@@ -137,13 +149,18 @@ fun ModernBottomBar(
                         val clipboardText = clipboardManager.getText()?.text ?: ""
                         if (clipboardText.isNotEmpty()) {
                             val currentValue = editorState.textField.value
-                            val newText = currentValue.text.substring(0, currentValue.selection.start) +
-                                    clipboardText +
-                                    currentValue.text.substring(currentValue.selection.end)
-                            editorState.textField.value = currentValue.copy(
-                                text = newText,
-                                selection = TextRange(currentValue.selection.start + clipboardText.length)
+                            val start = minOf(currentValue.selection.start, currentValue.selection.end).coerceAtLeast(0)
+                            val end = maxOf(currentValue.selection.start, currentValue.selection.end).coerceAtLeast(0)
+                            val safeText = currentValue.text
+                            val newText = safeText.substring(0, start) + clipboardText + safeText.substring(end)
+                            val newCursorPos = start + clipboardText.length
+                            editorState.onTextChange(
+                                currentValue.copy(
+                                    text = newText,
+                                    selection = TextRange(newCursorPos)
+                                )
                             )
+                            Toast.makeText(context, "Pasted from Clipboard", Toast.LENGTH_SHORT).show()
                         }
                     }
                 )
@@ -178,16 +195,11 @@ fun ModernBottomBar(
                             val compiler = CompilerClient()
                             val code = editorState.textField.value.text
 
-                            // Launch coroutine to compile
                             CoroutineScope(Dispatchers.Main).launch {
                                 try {
-                                    // Optional: save file locally
                                     compiler.saveCodeLocally(fileManager, currentFileName, code)
-
-                                    // Compile code on server
                                     val result = compiler.compile(code, currentLanguage)
 
-                                    // Combine stdout, stderr, compile_output for full visibility
                                     val output = buildString {
                                         if (result.error != null) {
                                             append(result.error)
@@ -214,8 +226,6 @@ fun ModernBottomBar(
                                             }
                                         }
                                     }
-
-                                    // Send output to screen
                                     onCompileOutput(output)
                                 } catch (e: Exception) {
                                     onCompileOutput("App Error: ${e.localizedMessage ?: "Unknown error occurred"}")
@@ -234,7 +244,6 @@ fun ModernBottomBar(
                         )
                     }
                 }
-
             }
         }
     }
@@ -261,16 +270,16 @@ fun ModernIconButton(
     }
 }
 
-// Helper extension function to get selected text
 fun TextFieldValue.getSelectedText(): String {
     return if (selection.collapsed) {
         ""
     } else {
-        text.substring(selection.start, selection.end)
+        val start = minOf(selection.start, selection.end).coerceIn(0, text.length)
+        val end = maxOf(selection.start, selection.end).coerceIn(0, text.length)
+        text.substring(start, end)
     }
 }
 
-// Helper extension function to check if text is selected
 fun TextFieldValue.hasSelection(): Boolean {
     return !selection.collapsed
 }
