@@ -207,15 +207,25 @@ fun ModernBottomBar(
                                             if (!result.stdout.isNullOrEmpty()) {
                                                 append(result.stdout)
                                             }
-                                            if (!result.stderr.isNullOrEmpty()) {
+                                            
+                                            // Clean JVM server deprecation warnings from stderr and compile_output
+                                            val cleanStderr = result.stderr?.lines()
+                                                ?.filterNot { line -> line.contains("OpenJDK 64-Bit Server VM warning", ignoreCase = true) || line.contains("-Xverify", ignoreCase = true) }
+                                                ?.joinToString("\n")?.trim()
+
+                                            val cleanCompilerLog = result.compile_output?.lines()
+                                                ?.filterNot { line -> line.contains("OpenJDK 64-Bit Server VM warning", ignoreCase = true) || line.contains("-Xverify", ignoreCase = true) }
+                                                ?.joinToString("\n")?.trim()
+
+                                            if (!cleanStderr.isNullOrEmpty()) {
                                                 if (isNotEmpty()) append("\n--- Standard Error ---\n")
-                                                append(result.stderr)
+                                                append(cleanStderr)
                                             }
-                                            if (!result.compile_output.isNullOrEmpty()) {
+                                            if (!cleanCompilerLog.isNullOrEmpty()) {
                                                 if (isNotEmpty()) append("\n--- Compiler Log ---\n")
-                                                append(result.compile_output)
+                                                append(cleanCompilerLog)
                                             }
-                                            if (result.stdout.isNullOrEmpty() && result.stderr.isNullOrEmpty() && result.compile_output.isNullOrEmpty()) {
+                                            if (result.stdout.isNullOrEmpty() && cleanStderr.isNullOrEmpty() && cleanCompilerLog.isNullOrEmpty()) {
                                                 append("Execution finished (no output).")
                                             }
                                             if (result.time != null || result.memory != null) {
