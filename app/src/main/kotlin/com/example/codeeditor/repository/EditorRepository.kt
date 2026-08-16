@@ -167,6 +167,18 @@ class EditorRepository(private val context: Context) {
         val versions = versionDao.getVersionsForFile(fileId)
         val latestVersion = versions.lastOrNull()
 
+        // FIX: If V1 exists but its base content is empty, update V1 with initial code
+        if (versions.size == 1 && latestVersion?.isBase == true && latestVersion.patchContent.isEmpty()) {
+            val updatedV1 = latestVersion.copy(
+                patchContent = currentContent,
+                versionName = versionName.ifBlank { "Initial Version" },
+                createdAt = System.currentTimeMillis()
+            )
+            versionDao.updateVersion(updatedV1)
+            clearRecoveryDraft(fileId)
+            return@withContext updatedV1
+        }
+
         val nextVersionNum = (latestVersion?.versionNumber ?: 0) + 1
         val vName = versionName.ifBlank { "Version $nextVersionNum" }
 

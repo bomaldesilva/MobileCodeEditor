@@ -229,7 +229,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     /**
-     * Explicit Save: Saves content to disk and clears recovery draft.
+     * Explicit Save: Saves content to disk, updates version history, and clears recovery draft.
      */
     fun saveFile() {
         val active = _uiState.value.activeFile ?: return
@@ -237,8 +237,14 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             try {
                 repository.writeToDisk(active.filePath, text)
-                repository.clearRecoveryDraft(active.fileId)
-                _uiState.update { it.copy(statusMessage = "Saved ${active.fileName}") }
+                repository.saveVersion(active.fileId, text, "Saved")
+                val updatedVersions = repository.getVersionHistory(active.fileId)
+                _uiState.update {
+                    it.copy(
+                        versionHistory = updatedVersions,
+                        statusMessage = "Saved ${active.fileName}"
+                    )
+                }
             } catch (e: Exception) {
                 _uiState.update { it.copy(statusMessage = "Save Error: ${e.message}") }
             }

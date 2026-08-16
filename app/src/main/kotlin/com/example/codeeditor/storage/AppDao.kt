@@ -31,6 +31,9 @@ interface VersionDao {
     @Insert
     suspend fun insertVersion(version: VersionEntity): Long
 
+    @Update
+    suspend fun updateVersion(version: VersionEntity)
+
     @Query("SELECT * FROM file_versions WHERE fileId = :fileId ORDER BY versionNumber ASC")
     suspend fun getVersionsForFile(fileId: Long): List<VersionEntity>
 
